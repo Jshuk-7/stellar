@@ -60,11 +60,14 @@ impl Interpreter {
                     BinaryOp::Mul => Literal::Number(lvalue * rvalue),
                     BinaryOp::Div => {
                         if rvalue == 0.0 {
-                            return self.runtime_error(ErrorKind::ZeroDivision, "cannot divide by zero".to_string());
+                            return self.runtime_error(
+                                ErrorKind::ZeroDivision,
+                                "cannot divide by zero".to_string(),
+                            );
                         }
 
                         Literal::Number(lvalue / rvalue)
-                    },
+                    }
                     BinaryOp::Gt => Literal::Bool(lvalue > rvalue),
                     BinaryOp::Gte => Literal::Bool(lvalue >= rvalue),
                     BinaryOp::Lt => Literal::Bool(lvalue < rvalue),
@@ -83,6 +86,16 @@ impl Interpreter {
                     return Ok(res);
                 } else if let BinaryOp::Add = op {
                     let res = Literal::String(lvalue + &rvalue);
+                    return Ok(res);
+                }
+            } else if let Literal::Number(rvalue) = right {
+                if let BinaryOp::Add = op {
+                    let res = Literal::String(lvalue + &rvalue.to_string());
+                    return Ok(res);
+                }
+            } else if let Literal::Char(rvalue) = right {
+                if let BinaryOp::Add = op {
+                    let res = Literal::String(lvalue + &rvalue.to_string());
                     return Ok(res);
                 }
             }
