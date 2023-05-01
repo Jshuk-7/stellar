@@ -2,6 +2,7 @@ use super::{BinaryOp, Expr, Literal, UnaryOp};
 
 pub enum ErrorKind {
     OperatorNotDefined,
+    ZeroDivision,
     TypeMismatch,
 }
 
@@ -9,6 +10,7 @@ impl std::fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ErrorKind::OperatorNotDefined => write!(f, "Operator not defined"),
+            ErrorKind::ZeroDivision => write!(f, "Division by zero"),
             ErrorKind::TypeMismatch => write!(f, "Type mismatch"),
         }
     }
@@ -56,7 +58,13 @@ impl Interpreter {
                     BinaryOp::Add => Literal::Number(lvalue + rvalue),
                     BinaryOp::Sub => Literal::Number(lvalue - rvalue),
                     BinaryOp::Mul => Literal::Number(lvalue * rvalue),
-                    BinaryOp::Div => Literal::Number(lvalue / rvalue),
+                    BinaryOp::Div => {
+                        if rvalue == 0.0 {
+                            return self.runtime_error(ErrorKind::ZeroDivision, "cannot divide by zero".to_string());
+                        }
+
+                        Literal::Number(lvalue / rvalue)
+                    },
                     BinaryOp::Gt => Literal::Bool(lvalue > rvalue),
                     BinaryOp::Gte => Literal::Bool(lvalue >= rvalue),
                     BinaryOp::Lt => Literal::Bool(lvalue < rvalue),
