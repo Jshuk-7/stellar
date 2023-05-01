@@ -1,1 +1,2 @@
-print 'a';
+let a;
+print a;

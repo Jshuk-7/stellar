@@ -1,51 +1,30 @@
-use super::{BinaryOp, Expr, Literal, Stmt, UnaryOp};
+use super::{BinaryOp, Environment, ErrorKind, Expr, Literal, Result, RuntimeError, Stmt, UnaryOp};
 
-pub enum ErrorKind {
-    OperatorNotDefined,
-    ZeroDivision,
-    TypeMismatch,
+pub struct Interpreter {
+    environment: Environment,
 }
-
-impl std::fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ErrorKind::OperatorNotDefined => write!(f, "Operator not defined"),
-            ErrorKind::ZeroDivision => write!(f, "Division by zero"),
-            ErrorKind::TypeMismatch => write!(f, "Type mismatch"),
-        }
-    }
-}
-
-pub struct RuntimeError {
-    pub what: String,
-    pub kind: ErrorKind,
-}
-
-impl std::fmt::Display for RuntimeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.kind, self.what)
-    }
-}
-
-pub type Result<T> = std::result::Result<T, RuntimeError>;
-
-#[derive(Default)]
-pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn interpret(&self, statements: &Vec<Stmt>) {
+    pub fn new() -> Self {
+        Self {
+            environment: Environment::new(),
+        }
+    }
+
+    pub fn interpret(&mut self, statements: &[Stmt]) {
         for statement in statements.iter() {
             self.execute(statement.clone())
         }
     }
 
-    fn execute(&self, stmt: Stmt) {
+    fn execute(&mut self, stmt: Stmt) {
         match stmt {
             Stmt::Expr(expr) => match self.evaluate(*expr) {
                 Ok(..) => (),
                 Err(err) => println!("Runtime Error: {err}"),
             },
             Stmt::Print(expr) => self.visit_print_statement(*expr),
+            Stmt::Let(name, initializer) => self.visit_let_statement(name, initializer),
         }
     }
 
@@ -55,13 +34,30 @@ impl Interpreter {
             Expr::Grouping(expr) => self.evaluate(*expr),
             Expr::Unary(op, expr) => self.visit_unary_expr(op, *expr),
             Expr::Literal(literal) => Ok(literal),
+            Expr::Variable(name) => self.visit_variable_expr(name),
         }
     }
 
     fn visit_print_statement(&self, expr: Expr) {
-        if let Ok(literal) = self.evaluate(expr) {
-            crate::print_literal(literal);
+        match self.evaluate(expr) {
+            Ok(literal) => crate::print_literal(literal),
+            Err(err) => println!("Runtime Error: {err}"),
         }
+    }
+
+    fn visit_let_statement(&mut self, name: String, value: Option<Box<Expr>>) {
+        let initial_value = match value {
+            Some(expr) => match self.evaluate(*expr) {
+                Ok(literal) => Some(literal),
+                Err(err) => {
+                    println!("Runtime Error: {err}");
+                    None
+                }
+            },
+            None => None,
+        };
+
+        self.define_variable(name, initial_value);
     }
 
     fn visit_binary_expr(&self, lhs: Expr, op: BinaryOp, rhs: Expr) -> Result<Literal> {
@@ -154,6 +150,22 @@ impl Interpreter {
             UnaryOp::Bang => self.is_truthy(value),
             UnaryOp::Minus => self.negate(value),
         }
+    }
+
+    fn visit_variable_expr(&self, name: String) -> Result<Literal> {
+        match self.environment.get_variable(&name) {
+            Some(value) => Ok(value),
+            None => self.runtime_error(
+                ErrorKind::UninitializedAccess,
+                format!(
+                    "variable '{name}' was not initialized, cannot read from unititialized memory"
+                ),
+            ),
+        }
+    }
+
+    fn define_variable(&mut self, name: String, value: Option<Literal>) {
+        self.environment.define(name, value);
     }
 
     fn is_truthy(&self, value: Literal) -> Result<Literal> {

@@ -4,10 +4,17 @@ pub mod lang;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Default)]
-pub struct Stellar {}
+pub struct Stellar {
+    interpreter: lang::Interpreter,
+}
 
 impl Stellar {
+    pub fn new() -> Self {
+        Self {
+            interpreter: lang::Interpreter::new(),
+        }
+    }
+
     pub fn run(&mut self, source: String) {
         let mut lexer = lang::Lexer::new(source);
         let tokens = lexer.scan_tokens();
@@ -27,8 +34,7 @@ impl Stellar {
             return;
         }
 
-        let interpreter = lang::Interpreter::default();
-        interpreter.interpret(&statements);
+        self.interpreter.interpret(&statements);
     }
 
     pub fn run_file(&mut self, path: String) {

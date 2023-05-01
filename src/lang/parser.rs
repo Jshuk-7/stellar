@@ -14,7 +14,7 @@ impl<'a> Parser<'a> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.statement());
+            statements.push(self.declaration());
         }
 
         statements
@@ -40,6 +40,14 @@ impl<'a> Parser<'a> {
         self.equality()
     }
 
+    fn declaration(&mut self) -> Stmt {
+        if self.matches(vec![TokenType::Let]) {
+            return self.variable_declaration();
+        }
+
+        self.statement()
+    }
+
     fn statement(&mut self) -> Stmt {
         if self.matches(vec![TokenType::Print]) {
             return self.print_statement();
@@ -56,6 +64,24 @@ impl<'a> Parser<'a> {
         );
 
         Stmt::Print(Box::new(expr))
+    }
+
+    fn variable_declaration(&mut self) -> Stmt {
+        let name = self
+            .consume(TokenType::Ident, "Expected identifier".to_string())
+            .unwrap();
+
+        let mut initializer = None;
+        if self.matches(vec![TokenType::Eq]) {
+            initializer = Some(Box::new(self.expression()));
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after declaration".to_string(),
+        );
+
+        Stmt::Let(name.lexeme, initializer)
     }
 
     fn expression_statement(&mut self) -> Stmt {
@@ -146,6 +172,8 @@ impl<'a> Parser<'a> {
         } else if self.matches(vec![TokenType::Char]) {
             let character = self.previous().lexeme.parse::<char>().unwrap();
             return Some(Expr::Literal(Literal::Char(character)));
+        } else if self.matches(vec![TokenType::Ident]) {
+            return Some(Expr::Variable(self.previous().lexeme));
         } else if self.matches(vec![TokenType::LParen]) {
             let expr = self.expression();
             self.consume(
@@ -191,8 +219,9 @@ impl<'a> Parser<'a> {
         None
     }
 
-    fn error(&self, token: Token, msg: String) {
+    fn error(&mut self, token: Token, msg: String) {
         crate::error(token.line, format!("at '{}', {msg}", token.lexeme));
+        self.synchronize();
     }
 
     fn matches(&mut self, types: Vec<TokenType>) -> bool {

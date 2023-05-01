@@ -2,7 +2,7 @@ use stellar::Stellar;
 
 fn main() {
     let mut args = std::env::args();
-    let mut stellar = Stellar::default();
+    let mut stellar = Stellar::new();
 
     match args.len() {
         1 => stellar.repl(),
