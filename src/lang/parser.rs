@@ -1,4 +1,4 @@
-use super::{Expr, Literal, Token, TokenType};
+use super::{BinaryOp, Expr, Literal, Token, TokenType, UnaryOp};
 
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
@@ -38,9 +38,9 @@ impl<'a> Parser<'a> {
         let mut expr = self.comparison();
 
         while self.matches(vec![TokenType::Ne, TokenType::EqEq]) {
-            let operator = self.previous();
+            let operator = BinaryOp::from(self.previous().ty);
             let rhs = self.comparison();
-            expr = Expr::Binary(Box::new(expr), operator.ty, Box::new(rhs));
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(rhs));
         }
 
         expr
@@ -55,9 +55,9 @@ impl<'a> Parser<'a> {
             TokenType::Lt,
             TokenType::Lte,
         ]) {
-            let operator = self.previous();
+            let operator = BinaryOp::from(self.previous().ty);
             let rhs = self.term();
-            expr = Expr::Binary(Box::new(expr), operator.ty, Box::new(rhs));
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(rhs));
         }
 
         expr
@@ -67,9 +67,9 @@ impl<'a> Parser<'a> {
         let mut expr = self.unary();
 
         while self.matches(vec![TokenType::Star, TokenType::Slash]) {
-            let operator = self.previous();
+            let operator = BinaryOp::from(self.previous().ty);
             let rhs = self.unary();
-            expr = Expr::Binary(Box::new(expr), operator.ty, Box::new(rhs));
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(rhs));
         }
 
         expr
@@ -79,9 +79,9 @@ impl<'a> Parser<'a> {
         let mut expr = self.factor();
 
         while self.matches(vec![TokenType::Plus, TokenType::Minus]) {
-            let operator = self.previous();
+            let operator = BinaryOp::from(self.previous().ty);
             let rhs = self.factor();
-            expr = Expr::Binary(Box::new(expr), operator.ty, Box::new(rhs));
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(rhs));
         }
 
         expr
@@ -89,26 +89,29 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self) -> Expr {
         if self.matches(vec![TokenType::Bang, TokenType::Minus]) {
-            let operator = self.previous();
+            let operator = UnaryOp::from(self.previous().ty);
             let rhs = self.unary();
-            return Expr::Unary(operator.ty, Box::new(rhs));
+            return Expr::Unary(operator, Box::new(rhs));
         }
 
         self.atom().unwrap()
     }
 
     fn atom(&mut self) -> Option<Expr> {
-        if self.matches(vec![TokenType::True]) {
-            return Some(Expr::Literal(Literal::Bool(true)));
-        } else if self.matches(vec![TokenType::False]) {
-            return Some(Expr::Literal(Literal::Bool(false)));
-        } else if self.matches(vec![TokenType::Null]) {
+        if self.matches(vec![TokenType::Null]) {
             return Some(Expr::Literal(Literal::Null));
         } else if self.matches(vec![TokenType::Number]) {
             let literal_value = self.previous().lexeme.parse::<f64>().unwrap();
             return Some(Expr::Literal(Literal::Number(literal_value)));
         } else if self.matches(vec![TokenType::String]) {
             return Some(Expr::Literal(Literal::String(self.previous().lexeme)));
+        } else if self.matches(vec![TokenType::True]) {
+            return Some(Expr::Literal(Literal::Bool(true)));
+        } else if self.matches(vec![TokenType::False]) {
+            return Some(Expr::Literal(Literal::Bool(false)));
+        } else if self.matches(vec![TokenType::Char]) {
+            let character = self.previous().lexeme.parse::<char>().unwrap();
+            return Some(Expr::Literal(Literal::Char(character)));
         } else if self.matches(vec![TokenType::LParen]) {
             let expr = self.expr();
             self.consume(

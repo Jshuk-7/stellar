@@ -13,6 +13,8 @@ pub enum TokenType {
     Eof,
 
     // Comparison/Equality
+    And,
+    Or,
     Bang,
     Eq,
     EqEq,
@@ -34,6 +36,7 @@ pub enum TokenType {
 
     // Keywords
     If,
+    Else,
     Let,
     Struct,
     SSelf,
@@ -90,7 +93,25 @@ impl Lexer {
             start: 0,
             line: 1,
             tokens: Vec::new(),
-            keywords: crate::make_keywords(),
+            keywords: vec![
+                ("if", TokenType::If),
+                ("else", TokenType::Else),
+                ("and", TokenType::And),
+                ("or", TokenType::Or),
+                ("let", TokenType::Let),
+                ("struct", TokenType::Struct),
+                ("self", TokenType::SSelf),
+                ("while", TokenType::While),
+                ("for", TokenType::For),
+                ("return", TokenType::Return),
+                ("fun", TokenType::Fun),
+                ("true", TokenType::True),
+                ("false", TokenType::False),
+                ("null", TokenType::Null),
+            ]
+            .into_iter()
+            .map(|(k, v)| (String::from(k), v))
+            .collect(),
         }
     }
 
@@ -189,7 +210,7 @@ impl Lexer {
             _ => {
                 if self.is_digit(c) {
                     self.number();
-                } else if self.is_alnum(c) {
+                } else if self.is_alpha(c) {
                     self.identifier();
                 } else {
                     self.error(format!("Unexpected symbol '{c}'"));
@@ -216,13 +237,20 @@ impl Lexer {
 
     fn error(&self, msg: String) {
         crate::error(self.line, msg);
+        crate::set_error_found(true)
     }
 
     fn char(&mut self) {
         self.advance();
         self.start += 1;
-        self.add_token(TokenType::Char);
 
+        if self.peek() != '\'' {
+            self.error("Unterminated character literal".to_string());
+            self.advance();
+            return;
+        }
+
+        self.add_token(TokenType::Char);
         self.advance();
     }
 
@@ -250,6 +278,11 @@ impl Lexer {
     fn number(&mut self) {
         while !self.is_at_end() && self.is_digit(self.peek()) {
             self.advance();
+        }
+
+        if self.is_at_end() {
+            self.add_token(TokenType::Number);
+            return;
         }
 
         if self.peek() == '.' {

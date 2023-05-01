@@ -2,6 +2,54 @@ use std::fmt::Display;
 
 use super::TokenType;
 
+#[derive(Debug, Clone, Copy)]
+pub enum BinaryOp {
+    Equal,
+    NotEqual,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
+}
+
+impl BinaryOp {
+    pub fn from(ty: TokenType) -> Self {
+        match ty {
+            TokenType::EqEq => BinaryOp::Equal,
+            TokenType::Ne => BinaryOp::NotEqual,
+            TokenType::Plus => BinaryOp::Add,
+            TokenType::Minus => BinaryOp::Sub,
+            TokenType::Star => BinaryOp::Mul,
+            TokenType::Slash => BinaryOp::Div,
+            TokenType::Gt => BinaryOp::Gt,
+            TokenType::Gte => BinaryOp::Gte,
+            TokenType::Lt => BinaryOp::Lt,
+            TokenType::Lte => BinaryOp::Lte,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UnaryOp {
+    Bang,
+    Minus,
+}
+
+impl UnaryOp {
+    pub fn from(ty: TokenType) -> Self {
+        match ty {
+            TokenType::Bang => UnaryOp::Bang,
+            TokenType::Minus => UnaryOp::Minus,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Literal {
     Number(f64),
@@ -13,9 +61,9 @@ pub enum Literal {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Binary(Box<Expr>, TokenType, Box<Expr>),
+    Binary(Box<Expr>, BinaryOp, Box<Expr>),
     Grouping(Box<Expr>),
-    Unary(TokenType, Box<Expr>),
+    Unary(UnaryOp, Box<Expr>),
     Literal(Literal),
 }
 

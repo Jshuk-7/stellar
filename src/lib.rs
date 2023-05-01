@@ -1,66 +1,115 @@
-use std::{collections::HashMap, io::Write};
+use std::io::Write;
 
 pub mod lang;
 
-pub fn run(source: String) {
-    let mut lexer = lang::Lexer::new(source);
-    let tokens = lexer.scan_tokens();
-    let mut parser = lang::Parser::new(tokens);
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    let expr = parser.parse();
-    let interpreter = lang::Interpreter::new();
+#[derive(Default)]
+pub struct Stellar {}
 
-    let literal = interpreter.evaluate(expr);
-    println!("{literal:?}");
-}
+impl Stellar {
+    pub fn run(&mut self, source: String) {
+        let mut lexer = lang::Lexer::new(source);
+        let tokens = lexer.scan_tokens();
 
-pub fn run_file(path: String) {
-    if let Ok(source) = std::fs::read_to_string(path) {
-        crate::run(source);
+        if let lang::TokenType::Eof = tokens.first().unwrap().ty {
+            return;
+        }
+
+        if self.handle_error_runtime() {
+            return;
+        }
+
+        let mut parser = lang::Parser::new(tokens);
+        let expr = parser.parse();
+
+        if self.handle_error_runtime() {
+            return;
+        }
+
+        let interpreter = lang::Interpreter::default();
+
+        match interpreter.interpret(expr) {
+            Ok(result) => crate::print_literal(result),
+            Err(err) => println!("Runtime Error: {err}"),
+        }
+    }
+
+    pub fn run_file(&mut self, path: String) {
+        if let Ok(source) = std::fs::read_to_string(path) {
+            self.run(source);
+        }
+    }
+
+    pub fn repl(&mut self) {
+        crate::print_welcome_msg();
+
+        let mut line = String::new();
+
+        loop {
+            print!(">> ");
+            std::io::stdout().flush().unwrap();
+            std::io::stdin().read_line(&mut line).unwrap();
+
+            self.run(line.clone());
+            line.clear();
+
+            if crate::error_found() {
+                crate::set_error_found(false);
+            }
+        }
+    }
+
+    pub fn handle_error_runtime(&self) -> bool {
+        if crate::error_found() {
+            crate::set_error_found(false);
+            return true;
+        }
+
+        false
     }
 }
 
-pub fn repl() {
-    let mut line = String::new();
-
-    loop {
-        print!(">> ");
-        std::io::stdout().flush().unwrap();
-        std::io::stdin().read_line(&mut line).unwrap();
-
-        crate::run(line.clone());
-        line.clear();
-    }
-}
-
-pub fn make_keywords() -> HashMap<String, lang::TokenType> {
-    let mut keywords = HashMap::new();
-
-    type TT = lang::TokenType;
-    keywords.insert("if".to_string(), TT::If);
-    keywords.insert("let".to_string(), TT::Let);
-    keywords.insert("struct".to_string(), TT::Struct);
-    keywords.insert("self".to_string(), TT::SSelf);
-    keywords.insert("while".to_string(), TT::While);
-    keywords.insert("for".to_string(), TT::For);
-    keywords.insert("return".to_string(), TT::Return);
-    keywords.insert("fun".to_string(), TT::Fun);
-    keywords.insert("true".to_string(), TT::True);
-    keywords.insert("false".to_string(), TT::False);
-    keywords.insert("null".to_string(), TT::Null);
-
-    keywords
+mod internal {
+    pub static mut ERROR_FOUND: bool = false;
 }
 
 pub fn error(line: u32, msg: String) {
     println!("[Line: {line}] Error: {msg}")
 }
 
-pub fn print_usage() {
+pub fn error_found() -> bool {
+    unsafe { internal::ERROR_FOUND }
+}
+
+pub fn set_error_found(err: bool) {
+    unsafe {
+        internal::ERROR_FOUND = err;
+    }
+}
+
+pub fn print_literal(literal: lang::Literal) {
+    match literal {
+        lang::Literal::Number(x) => println!("{x}"),
+        lang::Literal::String(x) => println!("{x}"),
+        lang::Literal::Bool(x) => println!("{x}"),
+        lang::Literal::Char(x) => println!("{x}"),
+        lang::Literal::Null => println!("null"),
+    }
+}
+
+pub fn print_welcome_msg() {
     println!(
-        "Usage: stellar <script>
-Args:
-    script: source filepath
-    (If no args are provided the interactive repl will start)"
+        "Welcome to Stellar {VERSION}, running {} on platform {}",
+        std::env::consts::ARCH,
+        std::env::consts::OS
     );
+}
+
+pub fn print_usage() {
+    println!("Usage: stellar <script>");
+    println!("Args:");
+    println!("\tscript: source filepath");
+    println!();
+    println!("(Hint: Run Stellar with no args to start the interactive REPL)");
 }
