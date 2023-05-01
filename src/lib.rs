@@ -21,18 +21,14 @@ impl Stellar {
         }
 
         let mut parser = lang::Parser::new(tokens);
-        let expr = parser.parse();
+        let statements = parser.parse();
 
         if self.handle_error_runtime() {
             return;
         }
 
         let interpreter = lang::Interpreter::default();
-
-        match interpreter.interpret(expr) {
-            Ok(result) => crate::print_literal(result),
-            Err(err) => println!("Runtime Error: {err}"),
-        }
+        interpreter.interpret(&statements);
     }
 
     pub fn run_file(&mut self, path: String) {

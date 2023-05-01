@@ -1,4 +1,4 @@
-use super::{BinaryOp, Expr, Literal, UnaryOp};
+use super::{BinaryOp, Expr, Literal, Stmt, UnaryOp};
 
 pub enum ErrorKind {
     OperatorNotDefined,
@@ -33,8 +33,20 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn interpret(&self, expr: Expr) -> Result<Literal> {
-        self.evaluate(expr)
+    pub fn interpret(&self, statements: &Vec<Stmt>) {
+        for statement in statements.iter() {
+            self.execute(statement.clone())
+        }
+    }
+
+    fn execute(&self, stmt: Stmt) {
+        match stmt {
+            Stmt::Expr(expr) => match self.evaluate(*expr) {
+                Ok(..) => (),
+                Err(err) => println!("Runtime Error: {err}"),
+            },
+            Stmt::Print(expr) => self.visit_print_statement(*expr),
+        }
     }
 
     fn evaluate(&self, expr: Expr) -> Result<Literal> {
@@ -43,6 +55,12 @@ impl Interpreter {
             Expr::Grouping(expr) => self.evaluate(*expr),
             Expr::Unary(op, expr) => self.visit_unary_expr(op, *expr),
             Expr::Literal(literal) => Ok(literal),
+        }
+    }
+
+    fn visit_print_statement(&self, expr: Expr) {
+        if let Ok(literal) = self.evaluate(expr) {
+            crate::print_literal(literal);
         }
     }
 

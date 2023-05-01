@@ -1,4 +1,4 @@
-use super::{BinaryOp, Expr, Literal, Token, TokenType, UnaryOp};
+use super::{BinaryOp, Expr, Literal, Stmt, Token, TokenType, UnaryOp};
 
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
@@ -10,8 +10,14 @@ impl<'a> Parser<'a> {
         Self { tokens, index: 0 }
     }
 
-    pub fn parse(&mut self) -> Expr {
-        self.expr()
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut statements = Vec::new();
+
+        while !self.is_at_end() {
+            statements.push(self.statement());
+        }
+
+        statements
     }
 
     fn advance(&mut self) -> Token {
@@ -30,8 +36,36 @@ impl<'a> Parser<'a> {
         self.tokens[self.index - 1].clone()
     }
 
-    fn expr(&mut self) -> Expr {
+    fn expression(&mut self) -> Expr {
         self.equality()
+    }
+
+    fn statement(&mut self) -> Stmt {
+        if self.matches(vec![TokenType::Print]) {
+            return self.print_statement();
+        }
+
+        self.expression_statement()
+    }
+
+    fn print_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after expression".to_string(),
+        );
+
+        Stmt::Print(Box::new(expr))
+    }
+
+    fn expression_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after expression".to_string(),
+        );
+
+        Stmt::Expr(Box::new(expr))
     }
 
     fn equality(&mut self) -> Expr {
@@ -113,7 +147,7 @@ impl<'a> Parser<'a> {
             let character = self.previous().lexeme.parse::<char>().unwrap();
             return Some(Expr::Literal(Literal::Char(character)));
         } else if self.matches(vec![TokenType::LParen]) {
-            let expr = self.expr();
+            let expr = self.expression();
             self.consume(
                 TokenType::RParen,
                 "Expected ')' after expression".to_string(),
@@ -150,7 +184,10 @@ impl<'a> Parser<'a> {
             return Some(self.advance());
         }
 
-        self.error(self.peek(), msg);
+        self.error(
+            self.peek(),
+            format!("{msg}, found '{}'", self.peek().lexeme),
+        );
         None
     }
 

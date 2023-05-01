@@ -1,3 +1,10 @@
+program        → statement* EOF ;
+
+statement      → exprStmt
+               | printStmt ;
+
+exprStmt       → expression ";" ;
+printStmt      → "print" expression ";" ;
 expression     → equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -5,5 +12,5 @@ term           → factor ( ( "-" | "+" ) factor )* ;
 factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | atom ;
-atom           → NUMBER | STRING | "true" | "false" | "nil"
+atom           → NUMBER | STRING | BOOL | CHAR | "null"
                | "(" expression ")" ;

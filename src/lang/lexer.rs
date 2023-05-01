@@ -35,6 +35,7 @@ pub enum TokenType {
     SlashEq,
 
     // Keywords
+    Print,
     If,
     Else,
     Let,
@@ -94,6 +95,7 @@ impl Lexer {
             line: 1,
             tokens: Vec::new(),
             keywords: vec![
+                ("print", TokenType::Print),
                 ("if", TokenType::If),
                 ("else", TokenType::Else),
                 ("and", TokenType::And),
