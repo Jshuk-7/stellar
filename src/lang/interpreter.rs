@@ -28,17 +28,18 @@ impl Interpreter {
         }
     }
 
-    fn evaluate(&self, expr: Expr) -> Result<Literal> {
+    fn evaluate(&mut self, expr: Expr) -> Result<Literal> {
         match expr {
             Expr::Binary(lhs, op, rhs) => self.visit_binary_expr(*lhs, op, *rhs),
             Expr::Grouping(expr) => self.evaluate(*expr),
             Expr::Unary(op, expr) => self.visit_unary_expr(op, *expr),
             Expr::Literal(literal) => Ok(literal),
             Expr::Variable(name) => self.visit_variable_expr(name),
+            Expr::Assign(name, value) => self.visit_assign_expr(name, *value),
         }
     }
 
-    fn visit_print_statement(&self, expr: Expr) {
+    fn visit_print_statement(&mut self, expr: Expr) {
         match self.evaluate(expr) {
             Ok(literal) => crate::print_literal(literal),
             Err(err) => println!("Runtime Error: {err}"),
@@ -60,7 +61,7 @@ impl Interpreter {
         self.define_variable(name, initial_value);
     }
 
-    fn visit_binary_expr(&self, lhs: Expr, op: BinaryOp, rhs: Expr) -> Result<Literal> {
+    fn visit_binary_expr(&mut self, lhs: Expr, op: BinaryOp, rhs: Expr) -> Result<Literal> {
         let left = self.evaluate(lhs)?;
         let right = self.evaluate(rhs)?;
 
@@ -143,7 +144,7 @@ impl Interpreter {
         )
     }
 
-    fn visit_unary_expr(&self, op: UnaryOp, expr: Expr) -> Result<Literal> {
+    fn visit_unary_expr(&mut self, op: UnaryOp, expr: Expr) -> Result<Literal> {
         let value = self.evaluate(expr)?;
 
         match op {
@@ -153,7 +154,7 @@ impl Interpreter {
     }
 
     fn visit_variable_expr(&self, name: String) -> Result<Literal> {
-        match self.environment.get_variable(&name) {
+        match self.environment.get(&name) {
             Some(value) => Ok(value),
             None => self.runtime_error(
                 ErrorKind::UninitializedAccess,
@@ -161,6 +162,20 @@ impl Interpreter {
                     "variable '{name}' was not initialized, cannot read from unititialized memory"
                 ),
             ),
+        }
+    }
+
+    fn visit_assign_expr(&mut self, name: String, value: Expr) -> Result<Literal> {
+        if !self.environment.contains(&name) {
+            return self.runtime_error(ErrorKind::UndefinedVariable, format!("'{name}'"));
+        }
+
+        match self.evaluate(value) {
+            Ok(literal) => {
+                self.environment.assign(name, Some(literal.clone()));
+                Ok(literal)
+            }
+            Err(err) => Err(err),
         }
     }
 

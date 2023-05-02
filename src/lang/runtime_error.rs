@@ -3,6 +3,7 @@ pub enum ErrorKind {
     ZeroDivision,
     TypeMismatch,
     UninitializedAccess,
+    UndefinedVariable,
 }
 
 impl std::fmt::Display for ErrorKind {
@@ -12,6 +13,7 @@ impl std::fmt::Display for ErrorKind {
             ErrorKind::ZeroDivision => write!(f, "Division by zero"),
             ErrorKind::TypeMismatch => write!(f, "Type mismatch"),
             ErrorKind::UninitializedAccess => write!(f, "Uninitialized access"),
+            ErrorKind::UndefinedVariable => write!(f, "Undefined variable"),
         }
     }
 }

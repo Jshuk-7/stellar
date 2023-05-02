@@ -66,6 +66,7 @@ pub enum Expr {
     Unary(UnaryOp, Box<Expr>),
     Literal(Literal),
     Variable(String),
+    Assign(String, Box<Expr>),
 }
 
 impl Display for Expr {
@@ -82,6 +83,7 @@ impl Display for Expr {
                 Literal::Null => write!(f, "Literal(Null)"),
             },
             Expr::Variable(name) => write!(f, "Variable({name})"),
+            Expr::Assign(name, expr) => write!(f, "Assign({name}, {expr})"),
         }
     }
 }

@@ -17,7 +17,13 @@ impl Environment {
         self.variables.insert(name, value);
     }
 
-    pub fn get_variable(&self, name: &String) -> Option<Literal> {
+    pub fn assign(&mut self, name: String, value: Option<Literal>) {
+        if self.contains(&name) {
+            self.variables.insert(name, value);
+        }
+    }
+
+    pub fn get(&self, name: &String) -> Option<Literal> {
         if self.variables.contains_key(name) {
             return self.variables.get(name).unwrap().clone();
         }
@@ -25,7 +31,7 @@ impl Environment {
         None
     }
 
-    pub fn contains_ident(&self, name: &String) -> bool {
+    pub fn contains(&self, name: &String) -> bool {
         self.variables.contains_key(name)
     }
 }

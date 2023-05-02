@@ -37,7 +37,7 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
     }
 
     fn declaration(&mut self) -> Stmt {
@@ -92,6 +92,23 @@ impl<'a> Parser<'a> {
         );
 
         Stmt::Expr(Box::new(expr))
+    }
+
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+
+        if self.matches(vec![TokenType::Eq]) {
+            let equals_op = self.previous();
+            let value = self.assignment();
+
+            if let Expr::Variable(name) = expr {
+                return Expr::Assign(name, Box::new(value));
+            }
+
+            self.error(equals_op, format!("lvalue required"));
+        }
+
+        expr
     }
 
     fn equality(&mut self) -> Expr {
