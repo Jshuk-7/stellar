@@ -1,4 +1,6 @@
-use super::{BinaryOp, Environment, ErrorKind, Expr, Literal, Result, RuntimeError, Stmt, UnaryOp};
+use super::{
+    BinaryOp, Environment, ErrorKind, Expr, Literal, LogicalOp, Result, RuntimeError, Stmt, UnaryOp,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum InterpreterMode {
@@ -79,6 +81,7 @@ impl Interpreter {
         match expr {
             Expr::Binary(lhs, op, rhs) => self.visit_binary_expr(*lhs, op, *rhs),
             Expr::Grouping(expr) => self.evaluate(*expr),
+            Expr::Logical(lhs, op, rhs) => self.visit_logical_expr(*lhs, op, *rhs),
             Expr::Unary(op, expr) => self.visit_unary_expr(op, *expr),
             Expr::Literal(literal) => Ok(literal),
             Expr::Variable(name) => self.visit_variable_expr(name),
@@ -212,6 +215,41 @@ impl Interpreter {
             ErrorKind::OperatorNotDefined,
             format!("'{op:?}' not supported for types '{typename1}' and '{typename2}'"),
         )
+    }
+
+    fn visit_logical_expr(&mut self, lhs: Expr, op: LogicalOp, rhs: Expr) -> Result<Literal> {
+        let left = self.evaluate(lhs)?;
+
+        match op {
+            LogicalOp::And => {
+                if let Ok(res) = self.is_truthy(left) {
+                    if let Literal::Bool(value) = res {
+                        if !value {
+                            return Ok(Literal::Bool(false));
+                        }
+                    }
+                }
+            }
+            LogicalOp::Or => {
+                if let Ok(res) = self.is_truthy(left) {
+                    if let Literal::Bool(value) = res {
+                        if value {
+                            return Ok(Literal::Bool(true));
+                        }
+                    }
+                }
+            }
+        }
+
+        let right = self.evaluate(rhs)?;
+        
+        if let Ok(res) = self.is_truthy(right) {
+            if let Literal::Bool(value) = res {
+                return Ok(Literal::Bool(value));
+            }
+        }
+
+        unreachable!()
     }
 
     fn visit_unary_expr(&mut self, op: UnaryOp, expr: Expr) -> Result<Literal> {

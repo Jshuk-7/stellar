@@ -1,4 +1,4 @@
-use super::{BinaryOp, Expr, Literal, Stmt, Token, TokenType, UnaryOp};
+use super::{BinaryOp, Expr, Literal, Stmt, Token, TokenType, UnaryOp, LogicalOp};
 
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
@@ -154,7 +154,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> Expr {
-        let expr = self.equality();
+        let expr = self.or();
 
         if self.matches(vec![TokenType::Eq]) {
             let equals_op = self.previous();
@@ -165,6 +165,30 @@ impl<'a> Parser<'a> {
             }
 
             self.error(equals_op, format!("lvalue required"));
+        }
+
+        expr
+    }
+
+    fn or(&mut self) -> Expr {
+        let mut expr = self.and();
+
+        while self.matches(vec![TokenType::Or]) {
+            let operator = LogicalOp::from(self.previous().ty);
+            let rhs = self.and();
+            expr = Expr::Logical(Box::new(expr), operator, Box::new(rhs));
+        }
+
+        expr
+    }
+
+    fn and(&mut self) -> Expr {
+        let mut expr = self.equality();
+
+        while self.matches(vec![TokenType::And]) {
+            let operator = LogicalOp::from(self.previous().ty);
+            let rhs = self.equality();
+            expr = Expr::Logical(Box::new(expr), operator, Box::new(rhs));
         }
 
         expr

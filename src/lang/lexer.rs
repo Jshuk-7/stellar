@@ -98,8 +98,8 @@ impl Lexer {
                 ("print", TokenType::Print),
                 ("if", TokenType::If),
                 ("else", TokenType::Else),
-                ("and", TokenType::And),
-                ("or", TokenType::Or),
+                ("&&", TokenType::And),
+                ("||", TokenType::Or),
                 ("let", TokenType::Let),
                 ("struct", TokenType::Struct),
                 ("self", TokenType::SSelf),
@@ -362,7 +362,7 @@ impl Lexer {
     }
 
     fn is_alpha(&self, c: char) -> bool {
-        c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_'
+        c.is_ascii_lowercase() || c.is_ascii_uppercase() || "_&|".contains(c)
     }
 
     fn is_alnum(&self, c: char) -> bool {

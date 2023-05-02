@@ -50,6 +50,22 @@ impl UnaryOp {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum LogicalOp {
+    And,
+    Or,
+}
+
+impl LogicalOp {
+    pub fn from(ty: TokenType) -> Self {
+        match ty {
+            TokenType::And => LogicalOp::And,
+            TokenType::Or => LogicalOp::Or,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Literal {
     Number(f64),
@@ -63,6 +79,7 @@ pub enum Literal {
 pub enum Expr {
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
     Grouping(Box<Expr>),
+    Logical(Box<Expr>, LogicalOp, Box<Expr>),
     Unary(UnaryOp, Box<Expr>),
     Literal(Literal),
     Variable(String),
@@ -74,6 +91,7 @@ impl Display for Expr {
         match self {
             Expr::Binary(lhs, op, rhs) => write!(f, "Binary({lhs}, {op:?}, {rhs})"),
             Expr::Grouping(expr) => write!(f, "Grouping({expr})"),
+            Expr::Logical(lhs, op, rhs) => write!(f, "Logical({lhs}, {op:?}, {rhs})"),
             Expr::Unary(op, expr) => write!(f, "Unary({op:?}, {expr})"),
             Expr::Literal(literal) => match literal {
                 Literal::Number(x) => write!(f, "Literal({x})"),
