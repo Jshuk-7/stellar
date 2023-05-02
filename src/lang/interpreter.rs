@@ -12,7 +12,9 @@ pub struct InterpreterProperties {
 
 impl Default for InterpreterProperties {
     fn default() -> Self {
-        Self { mode: InterpreterMode::Repl }
+        Self {
+            mode: InterpreterMode::Repl,
+        }
     }
 }
 
@@ -45,9 +47,12 @@ impl Interpreter {
                 }
                 Err(err) => println!("Runtime Error: {err}"),
             },
-            Stmt::Print(expr) => self.visit_print_statement(*expr),
+            Stmt::If(condition, main_branch, else_branch) => {
+                self.visit_if_statement(*condition, *main_branch, else_branch)
+            }
             Stmt::Let(name, initializer) => self.visit_let_statement(name, initializer),
             Stmt::Block(statements) => self.visit_block_statement(&statements),
+            Stmt::Print(expr) => self.visit_print_statement(*expr),
         }
     }
 
@@ -81,9 +86,25 @@ impl Interpreter {
         }
     }
 
-    fn visit_print_statement(&mut self, expr: Expr) {
-        match self.evaluate(expr) {
-            Ok(literal) => crate::print_literal(literal),
+    fn visit_if_statement(
+        &mut self,
+        condition: Expr,
+        main_branch: Stmt,
+        else_branch: Option<Box<Stmt>>,
+    ) {
+        match self.evaluate(condition) {
+            Ok(literal) => {
+                if let Ok(res) = self.is_truthy(literal) {
+                    if let Literal::Bool(value) = res {
+                        if value {
+                            self.execute(main_branch);
+                        } else if else_branch.is_some() {
+                            let else_branch = *else_branch.unwrap();
+                            self.execute(else_branch);
+                        }
+                    }
+                }
+            }
             Err(err) => println!("Runtime Error: {err}"),
         }
     }
@@ -101,6 +122,13 @@ impl Interpreter {
         };
 
         self.define_variable(name, initial_value);
+    }
+
+    fn visit_print_statement(&mut self, expr: Expr) {
+        match self.evaluate(expr) {
+            Ok(literal) => crate::print_literal(literal),
+            Err(err) => println!("Runtime Error: {err}"),
+        }
     }
 
     fn visit_binary_expr(&mut self, lhs: Expr, op: BinaryOp, rhs: Expr) -> Result<Literal> {

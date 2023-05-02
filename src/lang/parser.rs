@@ -49,7 +49,9 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&mut self) -> Stmt {
-        if self.matches(vec![TokenType::Print]) {
+        if self.matches(vec![TokenType::If]) {
+            return self.if_statement();
+        } else if self.matches(vec![TokenType::Print]) {
             return self.print_statement();
         } else if self.matches(vec![TokenType::LCurly]) {
             return Stmt::Block(self.block());
@@ -58,14 +60,57 @@ impl<'a> Parser<'a> {
         self.expression_statement()
     }
 
-    fn print_statement(&mut self) -> Stmt {
+    fn expression_statement(&mut self) -> Stmt {
         let expr = self.expression();
         self.consume(
             TokenType::Semicolon,
             "Expected ';' after expression".to_string(),
         );
 
-        Stmt::Print(Box::new(expr))
+        Stmt::Expr(Box::new(expr))
+    }
+
+    fn if_statement(&mut self) -> Stmt {
+        self.consume(
+            TokenType::LParen,
+            "Expected '(' before expression".to_string(),
+        );
+
+        let condition = self.expression();
+
+        self.consume(
+            TokenType::RParen,
+            "Expected ')' after expression".to_string(),
+        );
+
+        self.consume(
+            TokenType::LCurly,
+            "Expected '{' after condition".to_string(),
+        );
+
+        let main_branch = self.statement();
+
+        self.consume(
+            TokenType::RCurly,
+            "Expected '}' after statement".to_string(),
+        );
+
+        let mut else_branch = None;
+        if self.matches(vec![TokenType::Else]) {
+            self.consume(
+                TokenType::LCurly,
+                "Expected '{' after else branch".to_string(),
+            );
+
+            else_branch = Some(Box::new(self.statement()));
+
+            self.consume(
+                TokenType::RCurly,
+                "Expected '}' after statement".to_string(),
+            );
+        }
+
+        Stmt::If(Box::new(condition), Box::new(main_branch), else_branch)
     }
 
     fn variable_declaration(&mut self) -> Stmt {
@@ -86,16 +131,6 @@ impl<'a> Parser<'a> {
         Stmt::Let(name.lexeme, initializer)
     }
 
-    fn expression_statement(&mut self) -> Stmt {
-        let expr = self.expression();
-        self.consume(
-            TokenType::Semicolon,
-            "Expected ';' after expression".to_string(),
-        );
-
-        Stmt::Expr(Box::new(expr))
-    }
-
     fn block(&mut self) -> Vec<Stmt> {
         let mut statements = Vec::new();
 
@@ -106,6 +141,16 @@ impl<'a> Parser<'a> {
         self.consume(TokenType::RCurly, "Expected '}' after block".to_string());
 
         statements
+    }
+
+    fn print_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after expression".to_string(),
+        );
+
+        Stmt::Print(Box::new(expr))
     }
 
     fn assignment(&mut self) -> Expr {
@@ -247,6 +292,7 @@ impl<'a> Parser<'a> {
             self.peek(),
             format!("{msg}, found '{}'", self.peek().lexeme),
         );
+
         None
     }
 

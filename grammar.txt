@@ -7,12 +7,14 @@ letDecl        → "let" IDENTIFIER ( "=" expression )? ";" ;
 
 statement      → exprStmt
                | printStmt ;
+               | ifStmt
                | block
-
-block          → "{" declaration* "}" ;
 
 exprStmt       → expression ";" ;
 printStmt      → "print" expression ";" ;
+ifStmt         → "if" "(" expression ")" statement
+                 "else" "{" statement "}"?
+block          → "{" declaration* "}" ;
 
 expression     → assignment ;
 assignment     → IDENTIFIER "=" assignment
