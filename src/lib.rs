@@ -4,14 +4,25 @@ pub mod lang;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum InterpreterMode {
+    Repl,
+    Script,
+}
+
+pub struct InterpreterProperties {
+    mode: InterpreterMode,
+}
+
 pub struct Stellar {
     interpreter: lang::Interpreter,
+    settings: InterpreterProperties,
 }
 
 impl Stellar {
-    pub fn new() -> Self {
+    pub fn new(properties: InterpreterProperties) -> Self {
         Self {
-            interpreter: lang::Interpreter::new(),
+            interpreter: lang::Interpreter::new(properties),
         }
     }
 
@@ -46,15 +57,13 @@ impl Stellar {
     pub fn repl(&mut self) {
         crate::print_welcome_msg();
 
-        let mut line = String::new();
-
         loop {
             print!(">> ");
             std::io::stdout().flush().unwrap();
+            let mut line = String::new();
             std::io::stdin().read_line(&mut line).unwrap();
 
-            self.run(line.clone());
-            line.clear();
+            self.run(line);
 
             if crate::error_found() {
                 crate::set_error_found(false);

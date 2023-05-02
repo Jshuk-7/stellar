@@ -51,6 +51,8 @@ impl<'a> Parser<'a> {
     fn statement(&mut self) -> Stmt {
         if self.matches(vec![TokenType::Print]) {
             return self.print_statement();
+        } else if self.matches(vec![TokenType::LCurly]) {
+            return Stmt::Block(self.block());
         }
 
         self.expression_statement()
@@ -92,6 +94,18 @@ impl<'a> Parser<'a> {
         );
 
         Stmt::Expr(Box::new(expr))
+    }
+
+    fn block(&mut self) -> Vec<Stmt> {
+        let mut statements = Vec::new();
+
+        while !self.check(TokenType::RCurly) && !self.is_at_end() {
+            statements.push(self.declaration());
+        }
+
+        self.consume(TokenType::RCurly, "Expected '}' after block".to_string());
+
+        statements
     }
 
     fn assignment(&mut self) -> Expr {

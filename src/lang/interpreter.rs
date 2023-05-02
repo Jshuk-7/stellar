@@ -2,12 +2,14 @@ use super::{BinaryOp, Environment, ErrorKind, Expr, Literal, Result, RuntimeErro
 
 pub struct Interpreter {
     environment: Environment,
+    show_output: bool
 }
 
 impl Interpreter {
-    pub fn new() -> Self {
+    pub fn new(show_output: bool) -> Self {
         Self {
             environment: Environment::new(),
+            show_output,
         }
     }
 
@@ -20,12 +22,33 @@ impl Interpreter {
     fn execute(&mut self, stmt: Stmt) {
         match stmt {
             Stmt::Expr(expr) => match self.evaluate(*expr) {
-                Ok(..) => (),
+                Ok(result) => {
+                    if self.show_output {
+                        crate::print_literal(result);
+                    }
+                },
                 Err(err) => println!("Runtime Error: {err}"),
             },
             Stmt::Print(expr) => self.visit_print_statement(*expr),
             Stmt::Let(name, initializer) => self.visit_let_statement(name, initializer),
+            Stmt::Block(statements) => self.visit_block_statement(&statements),
         }
+    }
+
+    fn execute_block(&mut self, statements: &[Stmt], environment: Environment) {
+        let previous = self.environment.clone();
+
+        self.environment = environment;
+
+        for statement in statements.iter() {
+            self.execute(statement.clone());
+        }
+
+        self.environment = previous;
+    }
+
+    fn visit_block_statement(&mut self, statements: &[Stmt]) {
+        self.execute_block(statements, Environment::from(Box::new(self.environment.clone())));
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Literal> {

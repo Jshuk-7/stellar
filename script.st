@@ -1,2 +1,5 @@
-let a;
-print a;
+let a = 1;
+{
+    let a = a + 1;
+    print a;
+}
