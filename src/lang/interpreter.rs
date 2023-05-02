@@ -1,15 +1,31 @@
 use super::{BinaryOp, Environment, ErrorKind, Expr, Literal, Result, RuntimeError, Stmt, UnaryOp};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum InterpreterMode {
+    Repl,
+    Script,
+}
+
+pub struct InterpreterProperties {
+    pub mode: InterpreterMode,
+}
+
+impl Default for InterpreterProperties {
+    fn default() -> Self {
+        Self { mode: InterpreterMode::Repl }
+    }
+}
+
 pub struct Interpreter {
     environment: Environment,
-    show_output: bool
+    properties: InterpreterProperties,
 }
 
 impl Interpreter {
-    pub fn new(show_output: bool) -> Self {
+    pub fn new(properties: InterpreterProperties) -> Self {
         Self {
             environment: Environment::new(),
-            show_output,
+            properties,
         }
     }
 
@@ -23,10 +39,10 @@ impl Interpreter {
         match stmt {
             Stmt::Expr(expr) => match self.evaluate(*expr) {
                 Ok(result) => {
-                    if self.show_output {
+                    if let InterpreterMode::Repl = self.properties.mode {
                         crate::print_literal(result);
                     }
-                },
+                }
                 Err(err) => println!("Runtime Error: {err}"),
             },
             Stmt::Print(expr) => self.visit_print_statement(*expr),
@@ -48,7 +64,10 @@ impl Interpreter {
     }
 
     fn visit_block_statement(&mut self, statements: &[Stmt]) {
-        self.execute_block(statements, Environment::from(Box::new(self.environment.clone())));
+        self.execute_block(
+            statements,
+            Environment::from(Box::new(self.environment.clone())),
+        );
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Literal> {

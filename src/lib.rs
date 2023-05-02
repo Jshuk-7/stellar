@@ -4,23 +4,12 @@ pub mod lang;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum InterpreterMode {
-    Repl,
-    Script,
-}
-
-pub struct InterpreterProperties {
-    mode: InterpreterMode,
-}
-
 pub struct Stellar {
     interpreter: lang::Interpreter,
-    settings: InterpreterProperties,
 }
 
 impl Stellar {
-    pub fn new(properties: InterpreterProperties) -> Self {
+    pub fn new(properties: lang::InterpreterProperties) -> Self {
         Self {
             interpreter: lang::Interpreter::new(properties),
         }
@@ -30,7 +19,7 @@ impl Stellar {
         let mut lexer = lang::Lexer::new(source);
         let tokens = lexer.scan_tokens();
 
-        if let lang::TokenType::Eof = tokens.first().unwrap().ty {
+        if tokens.len() == 1 {
             return;
         }
 
